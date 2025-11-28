@@ -1,7 +1,8 @@
-import sys
 import random
+import sys
+from typing import List, Optional, Tuple
+
 import pygame
-from typing import List, Tuple, Optional
 
 # -----------------------------
 # Konfigurasi Visual & Game
@@ -27,8 +28,18 @@ PIECE_VALUES = {"K": 10000, "Q": 900, "R": 500, "B": 330, "N": 320, "P": 100}
 
 # Simbol Unicode untuk bidak
 UNICODE_PIECES = {
-    "wK": "\u2654", "wQ": "\u2655", "wR": "\u2656", "wB": "\u2657", "wN": "\u2658", "wP": "\u2659",
-    "bK": "\u265A", "bQ": "\u265B", "bR": "\u265C", "bB": "\u265D", "bN": "\u265E", "bP": "\u265F",
+    "wK": "\u2654",
+    "wQ": "\u2655",
+    "wR": "\u2656",
+    "wB": "\u2657",
+    "wN": "\u2658",
+    "wP": "\u2659",
+    "bK": "\u265a",
+    "bQ": "\u265b",
+    "bR": "\u265c",
+    "bB": "\u265d",
+    "bN": "\u265e",
+    "bP": "\u265f",
 }
 
 # -----------------------------
@@ -57,6 +68,7 @@ def initial_board() -> Board:
 # Utilitas Board
 # -----------------------------
 
+
 def in_bounds(r: int, c: int) -> bool:
     return 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE
 
@@ -77,6 +89,7 @@ def get_type(piece: Optional[str]) -> Optional[str]:
 # Generator Langkah Pseudo-Legal
 # -----------------------------
 
+
 def generate_moves(board: Board, side: str) -> List[Move]:
     moves: List[Move] = []
     for r in range(BOARD_SIZE):
@@ -89,14 +102,36 @@ def generate_moves(board: Board, side: str) -> List[Move]:
                 elif p_type == "N":
                     moves.extend(gen_knight(board, r, c, side))
                 elif p_type == "B":
-                    moves.extend(gen_slider(board, r, c, side, [(-1, -1), (-1, 1), (1, -1), (1, 1)]))
+                    moves.extend(
+                        gen_slider(
+                            board, r, c, side, [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                        )
+                    )
                 elif p_type == "R":
-                    moves.extend(gen_slider(board, r, c, side, [(-1, 0), (1, 0), (0, -1), (0, 1)]))
+                    moves.extend(
+                        gen_slider(
+                            board, r, c, side, [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                        )
+                    )
                 elif p_type == "Q":
-                    moves.extend(gen_slider(board, r, c, side, [
-                        (-1, -1), (-1, 1), (1, -1), (1, 1),
-                        (-1, 0), (1, 0), (0, -1), (0, 1)
-                    ]))
+                    moves.extend(
+                        gen_slider(
+                            board,
+                            r,
+                            c,
+                            side,
+                            [
+                                (-1, -1),
+                                (-1, 1),
+                                (1, -1),
+                                (1, 1),
+                                (-1, 0),
+                                (1, 0),
+                                (0, -1),
+                                (0, 1),
+                            ],
+                        )
+                    )
                 elif p_type == "K":
                     moves.extend(gen_king(board, r, c, side))
     return moves
@@ -121,7 +156,11 @@ def gen_pawn(board: Board, r: int, c: int, side: str) -> List[Move]:
     # tangkap diagonal
     for dc in (-1, 1):
         rr, cc = r + dir, c + dc
-        if in_bounds(rr, cc) and board[rr][cc] is not None and get_color(board[rr][cc]) != side:
+        if (
+            in_bounds(rr, cc)
+            and board[rr][cc] is not None
+            and get_color(board[rr][cc]) != side
+        ):
             res.append(((r, c), (rr, cc), board[r][c], board[rr][cc]))
 
     # promosi (kita terapkan saat melakukan langkah)
@@ -130,7 +169,16 @@ def gen_pawn(board: Board, r: int, c: int, side: str) -> List[Move]:
 
 def gen_knight(board: Board, r: int, c: int, side: str) -> List[Move]:
     res: List[Move] = []
-    for dr, dc in [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]:
+    for dr, dc in [
+        (-2, -1),
+        (-2, 1),
+        (-1, -2),
+        (-1, 2),
+        (1, -2),
+        (1, 2),
+        (2, -1),
+        (2, 1),
+    ]:
         rr, cc = r + dr, c + dc
         if not in_bounds(rr, cc):
             continue
@@ -140,7 +188,9 @@ def gen_knight(board: Board, r: int, c: int, side: str) -> List[Move]:
     return res
 
 
-def gen_slider(board: Board, r: int, c: int, side: str, deltas: List[Tuple[int, int]]) -> List[Move]:
+def gen_slider(
+    board: Board, r: int, c: int, side: str, deltas: List[Tuple[int, int]]
+) -> List[Move]:
     res: List[Move] = []
     for dr, dc in deltas:
         rr, cc = r + dr, c + dc
@@ -176,6 +226,7 @@ def gen_king(board: Board, r: int, c: int, side: str) -> List[Move]:
 # Eksekusi Langkah & Promosi
 # -----------------------------
 
+
 def make_move(board: Board, move: Move) -> Board:
     (r1, c1), (r2, c2), piece, captured = move
     new_b = [row[:] for row in board]
@@ -192,13 +243,14 @@ def make_move(board: Board, move: Move) -> Board:
 # AI Sederhana
 # -----------------------------
 
+
 def ai_choose_move(board: Board, side: str) -> Optional[Move]:
     moves = generate_moves(board, side)
     if not moves:
         return None
     # pilih capture terbaik berdasarkan nilai material target
     best_capture = None
-    best_score = -10**9
+    best_score = -(10**9)
     for mv in moves:
         captured = mv[3]
         if captured:
@@ -216,7 +268,14 @@ def ai_choose_move(board: Board, side: str) -> Optional[Move]:
 # Rendering
 # -----------------------------
 
-def draw_board(screen, fonts, board: Board, selected: Optional[Tuple[int, int]], legal_moves_from_sel: List[Tuple[int, int]]):
+
+def draw_board(
+    screen,
+    fonts,
+    board: Board,
+    selected: Optional[Tuple[int, int]],
+    legal_moves_from_sel: List[Tuple[int, int]],
+):
     # papan
     for r in range(BOARD_SIZE):
         for c in range(BOARD_SIZE):
@@ -241,7 +300,9 @@ def draw_board(screen, fonts, board: Board, selected: Optional[Tuple[int, int]],
                 draw_piece(screen, fonts, piece, rect)
 
     # panel kanan
-    pygame.draw.rect(screen, BG_PANEL, pygame.Rect(BOARD_SIZE * TILE_SIZE, 0, PANEL_WIDTH, HEIGHT))
+    pygame.draw.rect(
+        screen, BG_PANEL, pygame.Rect(BOARD_SIZE * TILE_SIZE, 0, PANEL_WIDTH, HEIGHT)
+    )
 
 
 def draw_piece(screen, fonts, piece: str, rect: pygame.Rect):
@@ -254,14 +315,22 @@ def draw_piece(screen, fonts, piece: str, rect: pygame.Rect):
             if font is None:
                 font = pygame.font.SysFont(fname, int(TILE_SIZE * 0.8))
                 fonts[fname] = font
-            surf = font.render(code, True, (0, 0, 0)) if color == 'b' else font.render(code, True, (255, 255, 255))
+            surf = (
+                font.render(code, True, (0, 0, 0))
+                if color == "b"
+                else font.render(code, True, (255, 255, 255))
+            )
             # Outline tipis agar putih kontras: render dua kali (bayangan)
             shadow = font.render(code, True, (0, 0, 0))
-            shadow_pos = (rect.x + (TILE_SIZE - surf.get_width()) // 2 + 1,
-                          rect.y + (TILE_SIZE - surf.get_height()) // 2 + 1)
+            shadow_pos = (
+                rect.x + (TILE_SIZE - surf.get_width()) // 2 + 1,
+                rect.y + (TILE_SIZE - surf.get_height()) // 2 + 1,
+            )
             screen.blit(shadow, shadow_pos)
-            pos = (rect.x + (TILE_SIZE - surf.get_width()) // 2,
-                   rect.y + (TILE_SIZE - surf.get_height()) // 2)
+            pos = (
+                rect.x + (TILE_SIZE - surf.get_width()) // 2,
+                rect.y + (TILE_SIZE - surf.get_height()) // 2,
+            )
             screen.blit(surf, pos)
             return
         except Exception:
@@ -276,6 +345,7 @@ def draw_piece(screen, fonts, piece: str, rect: pygame.Rect):
 # Input Handling
 # -----------------------------
 
+
 def square_from_mouse(pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
     x, y = pos
     if x >= BOARD_SIZE * TILE_SIZE or y >= BOARD_SIZE * TILE_SIZE:
@@ -287,6 +357,7 @@ def square_from_mouse(pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
 # Game Loop
 # -----------------------------
 
+
 def main():
     pygame.init()
     pygame.display.set_caption("Catur Pygame - Manusia vs AI")
@@ -296,7 +367,7 @@ def main():
     fonts_cache = {}
 
     board = initial_board()
-    turn = 'w'  # putih = pemain manusia
+    turn = "w"  # putih = pemain manusia
     selected: Optional[Tuple[int, int]] = None
     legal_targets_from_sel: List[Tuple[int, int]] = []
 
@@ -313,18 +384,26 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and game_over_text is None:
-                if turn == 'w':
+            elif (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+                and game_over_text is None
+            ):
+                if turn == "w":
                     sq = square_from_mouse(event.pos)
                     if sq:
                         r, c = sq
                         piece = board[r][c]
                         # klik pertama: pilih bidak milik sendiri
                         if selected is None:
-                            if piece and get_color(piece) == 'w':
+                            if piece and get_color(piece) == "w":
                                 selected = (r, c)
                                 # hitung semua langkah dari kotak ini
-                                legal_targets_from_sel = [dst for (src, dst, p, cap) in generate_moves(board, 'w') if src == selected]
+                                legal_targets_from_sel = [
+                                    dst
+                                    for (src, dst, p, cap) in generate_moves(board, "w")
+                                    if src == selected
+                                ]
                             else:
                                 selected = None
                                 legal_targets_from_sel = []
@@ -333,38 +412,44 @@ def main():
                             if (r, c) in legal_targets_from_sel:
                                 # temukan move object yang cocok
                                 move_obj = None
-                                for mv in generate_moves(board, 'w'):
+                                for mv in generate_moves(board, "w"):
                                     if mv[0] == selected and mv[1] == (r, c):
                                         move_obj = mv
                                         break
                                 if move_obj:
                                     board = make_move(board, move_obj)
-                                    turn = 'b'
+                                    turn = "b"
                                     selected = None
                                     legal_targets_from_sel = []
                             else:
                                 # ganti seleksi jika klik bidak sendiri, atau batal jika tidak
-                                if piece and get_color(piece) == 'w':
+                                if piece and get_color(piece) == "w":
                                     selected = (r, c)
-                                    legal_targets_from_sel = [dst for (src, dst, p, cap) in generate_moves(board, 'w') if src == selected]
+                                    legal_targets_from_sel = [
+                                        dst
+                                        for (src, dst, p, cap) in generate_moves(
+                                            board, "w"
+                                        )
+                                        if src == selected
+                                    ]
                                 else:
                                     selected = None
                                     legal_targets_from_sel = []
 
         # Jika giliran AI dan game belum selesai
-        if game_over_text is None and turn == 'b':
-            ai_move = ai_choose_move(board, 'b')
+        if game_over_text is None and turn == "b":
+            ai_move = ai_choose_move(board, "b")
             if ai_move is None:
                 game_over_text = "Permainan selesai: Tidak ada langkah untuk Hitam."
             else:
                 board = make_move(board, ai_move)
-                turn = 'w'
+                turn = "w"
 
         # Cek jika salah satu sisi tidak punya langkah (sederhana)
         if game_over_text is None:
-            if turn == 'w' and not generate_moves(board, 'w'):
+            if turn == "w" and not generate_moves(board, "w"):
                 game_over_text = "Permainan selesai: Tidak ada langkah untuk Putih."
-            elif turn == 'b' and not generate_moves(board, 'b'):
+            elif turn == "b" and not generate_moves(board, "b"):
                 game_over_text = "Permainan selesai: Tidak ada langkah untuk Hitam."
 
         # Render
@@ -375,7 +460,7 @@ def main():
         panel_x = BOARD_SIZE * TILE_SIZE
         title = title_font.render("Catur Pygame", True, TEXT_COLOR)
         screen.blit(title, (panel_x + 20, 20))
-        turn_text = "Giliran: Putih" if turn == 'w' else "Giliran: Hitam"
+        turn_text = "Giliran: Putih" if turn == "w" else "Giliran: Hitam"
         t_surf = info_font.render(turn_text, True, TEXT_COLOR)
         screen.blit(t_surf, (panel_x + 20, 60))
 
